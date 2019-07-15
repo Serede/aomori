@@ -18,7 +18,7 @@ typedef struct net_s {
     int mask;
 } net;
 
-net *_parse_net_(char *network) {
+net *_aomori_parse_(char *network) {
     net *n;
     uint8_t byt[4];
     uint8_t mask;
@@ -77,10 +77,15 @@ aomori_node *aomori_create() {
 }
 
 void aomori_destroy(aomori_node *ao) {
-    if (ao == NULL) {
-        return;
+    unsigned i, j;
+    for (i = 0; i < 2; i++) {
+        if (ao->children[i] != NULL) {
+            aomori_destroy(ao->children[i]);
+        }
     }
-    free(ao);
+    if (ao != NULL) {
+        free(ao);
+    }
 }
 
 void aomori_print(aomori_node *ao) {
@@ -95,7 +100,7 @@ int aomori_put(aomori_node *ao, char *network, char *label) {
     net *n;
     int i;
 
-    n = _parse_net_(network);
+    n = _aomori_parse_(network);
     if (n == NULL) {
         return -1;
     }
@@ -126,7 +131,7 @@ char *aomori_get(aomori_node *ao, char *network) {
     net *n;
     int i;
 
-    n = _parse_net_(network);
+    n = _aomori_parse_(network);
     if (n == NULL) {
         return NULL;
     }

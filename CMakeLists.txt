@@ -13,4 +13,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_TESTING_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/test)
 
 include_directories(include)
+include_directories(${CMAKE_BINARY_DIR}/include)
+
+add_subdirectory(include)
 add_subdirectory(src)
