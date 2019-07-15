@@ -1,0 +1,8 @@
+file(GLOB test_list *.c)
+foreach(test_src ${test_list})
+    get_filename_component(test_name ${test_src} NAME_WE)
+    add_executable(${test_name} ${test_src})
+    set_target_properties(${test_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_TESTING_OUTPUT_DIRECTORY})
+    target_link_libraries(${test_name} aomori)
+    add_test(${test_name} ${CMAKE_TESTING_OUTPUT_DIRECTORY}/${test_name})
+endforeach(test_src ${test_list})

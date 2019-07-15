@@ -1,71 +1,145 @@
-#include "aomori.h"
+#include <aomori.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#define _NET_FMT_ "%" SCNu8 ".%" SCNu8 ".%" SCNu8 ".%" SCNu8 "/%" SCNu8
+
 struct aomori_node_s {
+    bool active;
     uint8_t label[AOMORI_LABEL_MAX_LEN];
     struct aomori_node_s *children[2];
 };
 
-typedef struct bit_s {
-    unsigned x : 1;
-} bit;
+typedef struct net_s {
+    bool bits[32];
+    int mask;
+} net;
 
-bit **parse_net(uint8_t *addr, uint8_t mask) {
-    bit **net, *current;
-    uint8_t octets[4];
+net *_parse_net_(char *network) {
+    net *n;
+    uint8_t byt[4];
+    uint8_t mask;
     int i, j, k;
 
-    if (sscanf(addr, "%" PRIu8 ".%" PRIu8 ".%" PRIu8 ".%" PRIu8, &octets[0],
-               &octets[1], &octets[2], &octets[3]) != 4) {
-        return NULL;
-    };
+    i = sscanf(network, _NET_FMT_, &byt[0], &byt[1], &byt[2], &byt[3], &mask);
 
-    net = (bit **)malloc(32 * sizeof(bit *));
-    if (net == NULL) {
+    if (i == 4) {
+        mask = 32;
+    } else if (i != 5) {
         return NULL;
     }
 
-    for (i = 0; (i < 4) && (4 * i < mask); i++) {
-        for (j = 0; (j < 8) && (4 * i + j < mask); j++) {
-            current = net[4 * i + j];
-            current = (bit *)malloc(32 * sizeof(bit));
-            if (current = NULL) {
-                for (k = 0; k < 4 * i + j; k++) {
-                    free(net[4 * i + j]);
-                }
-                free(net);
-                return NULL;
-            }
-            current->x = (octets[i] >> j) & 0x1;
+    n = (net *)malloc(sizeof(net));
+    if (n == NULL) {
+        return NULL;
+    }
+
+    for (i = 0; i < 4; i++) {
+        for (j = 0; j < 8; j++) {
+            n->bits[8 * i + j] = (byt[i] >> j) & 0x01;
         }
     }
 
-    if (mask < 32) {
-        net[mask] = NULL;
-    }
+    n->mask = mask;
 
-    return net;
+    return n;
 }
 
-int aomori_insert(aomori_node *ao, uint8_t *addr, uint8_t mask, char *label) {
-    aomori_node *node;
-    bit **net, *current;
+void _aomori_print_(aomori_node *ao, unsigned level) {
+    unsigned i, j;
+    for (i = 0; i < 2; i++) {
+        if (ao->children[i] != NULL) {
+            for (j = 0; j < level; j++) {
+                printf("  ");
+            }
+            printf("- [%01u] %01u: %s\n", level, i, ao->children[i]->label);
+            _aomori_print_(ao->children[i], level + 1);
+        }
+    }
+}
+
+aomori_node *aomori_create() {
+    aomori_node *ao;
+
+    ao = (aomori_node *)malloc(sizeof(aomori_node));
+    if (ao == NULL) {
+        return NULL;
+    }
+
+    ao->active = false;
+    ao->children[0] = NULL;
+    ao->children[1] = NULL;
+
+    return ao;
+}
+
+void aomori_destroy(aomori_node *ao) {
+    if (ao == NULL) {
+        return;
+    }
+    free(ao);
+}
+
+void aomori_print(aomori_node *ao) {
+    if (ao == NULL) {
+        return;
+    }
+    _aomori_print_(ao, 0);
+}
+
+int aomori_put(aomori_node *ao, char *network, char *label) {
+    aomori_node **node;
+    net *n;
     int i;
 
-    net = parse_net(addr, mask);
-    if (net == NULL) {
+    n = _parse_net_(network);
+    if (n == NULL) {
         return -1;
     }
 
-    node = ao;
-    for (i = 0; (i < 31) && (net[i + 1] != NULL); i++) {
-        node = node->children[net[i]->x];
-        if (node == NULL) {
-            node = (aomori_node *)malloc(sizeof(aomori_node));
+    node = &ao;
+    for (i = 0; i < n->mask - 1; i++) {
+        node = &(*node)->children[n->bits[i]];
+        if ((*node) == NULL) {
+            (*node) = aomori_create();
+            if ((*node) == NULL) {
+                return -1;
+            }
         }
     }
-    strcpy(node->label, label);
+    free(n);
+
+    if (strcpy((*node)->label, label) == NULL) {
+        return -1;
+    };
+    (*node)->active = true;
+
+    return 0;
+}
+
+char *aomori_get(aomori_node *ao, char *network) {
+    char *label;
+    aomori_node *node;
+    net *n;
+    int i;
+
+    n = _parse_net_(network);
+    if (n == NULL) {
+        return NULL;
+    }
+
+    label = NULL;
+    node = ao;
+    for (i = 0; (i < n->mask) && (node != NULL); i++) {
+        if (node->active) {
+            label = node->label;
+        }
+        node = node->children[n->bits[i]];
+    }
+    free(n);
+
+    return label;
 }
