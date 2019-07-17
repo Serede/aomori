@@ -48,15 +48,16 @@ net *_aomori_parse_(char *network) {
     return n;
 }
 
-void _aomori_print_(aomori_node *ao, unsigned level) {
+void _aomori_print_(FILE *stream, aomori_node *ao, unsigned level) {
     unsigned i, j;
     for (i = 0; i < 2; i++) {
         if (ao->children[i] != NULL) {
             for (j = 0; j < level; j++) {
-                printf("  ");
+                fprintf(stream, "  ");
             }
-            printf("- [%01u] %01u: %s\n", level, i, ao->children[i]->label);
-            _aomori_print_(ao->children[i], level + 1);
+            fprintf(stream, "- [%01u] %u: %s\n", level, i,
+                    ao->children[i]->label);
+            _aomori_print_(stream, ao->children[i], level + 1);
         }
     }
 }
@@ -88,11 +89,11 @@ void aomori_destroy(aomori_node *ao) {
     }
 }
 
-void aomori_print(aomori_node *ao) {
+void aomori_print(FILE *stream, aomori_node *ao) {
     if (ao == NULL) {
         return;
     }
-    _aomori_print_(ao, 0);
+    _aomori_print_(stream, ao, 0);
 }
 
 int aomori_put(aomori_node *ao, char *network, char *label) {
