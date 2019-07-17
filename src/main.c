@@ -175,7 +175,7 @@ int main(int argc, char **argv) {
                 label = aomori_get(ao, tokens[cols[j]]);
                 fprintf(out, "%s%s", args.ofs, label);
             }
-            fprintf(out, "\n", buffer);
+            fprintf(out, "\n");
         }
     }
 
